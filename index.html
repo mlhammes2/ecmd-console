@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>ECMD Carbon 4 — Autonomous Console v8.2 (Plain-English Co-Pilot)</title>
+<title>ECMD Carbon 4 — Autonomous Console v8.3 (Auto-Expanding Plain-English Co-Pilot)</title>
 <style>
   :root { color-scheme: dark; }
   body { margin: 0; padding: 12px; background: #090d16; color: #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
@@ -21,18 +21,19 @@
   button.pink { background: #db2777; border-color: #f472b6; font-weight: bold; }
   button.slate { background: #334155; color: #cbd5e1; border-color: #475569; }
   input, textarea { width: 100%; box-sizing: border-box; background: #0b0f19; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 8px; font-family: inherit; font-size: 12px; margin-top: 6px; }
+  textarea.auto-grow { min-height: 36px; max-height: 180px; overflow-y: hidden; resize: vertical; line-height: 1.45; transition: height 0.08s ease; }
   #statusBanner { padding: 8px; border-radius: 6px; background: #1e293b; color: #38bdf8; margin-bottom: 10px; font-weight: bold; word-break: break-word; }
-  #carbonChatOutput { white-space: pre-wrap; word-break: break-word; background: #07111e; border: 1px solid #38bdf8; border-radius: 8px; padding: 12px; margin-top: 8px; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13.5px; line-height: 1.55; color: #f8fafc; max-height: 300px; overflow-y: auto; }
+  #carbonChatOutput { white-space: pre-wrap; word-break: break-word; background: #07111e; border: 1px solid #38bdf8; border-radius: 8px; padding: 12px; margin-top: 8px; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 13.5px; line-height: 1.55; color: #f8fafc; height: auto; min-height: 44px; max-height: 380px; overflow-y: auto; }
   #dynamicPanelContent { max-height: 460px; overflow-y: auto; padding-right: 4px; margin-top: 6px; }
   #viewer { white-space: pre-wrap; word-break: break-word; background: #050811; border: 1px solid #1e293b; border-radius: 8px; padding: 10px; font-size: 11.5px; line-height: 1.45; min-height: 240px; max-height: 480px; overflow-y: auto; }
-  .row { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+  .row { display: flex; gap: 6px; align-items: flex-start; margin-top: 6px; flex-wrap: wrap; }
   .card { background: #0b1324; border: 1px solid #334155; border-radius: 6px; padding: 10px; margin-top: 8px; }
   .badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; background: #1e293b; color: #38bdf8; margin-right: 4px; }
 </style>
 </head>
 <body>
   <h1>
-    <span>⚡ ECMD Carbon 4 Console v8.2 (Plain-English Co-Pilot + Live File/Progress Inspector)</span>
+    <span>⚡ ECMD Carbon 4 Console v8.3 (Auto-Expanding Co-Pilot + File/Progress Inspector)</span>
     <div class="row" style="margin:0;">
       <button class="primary" onclick="loadBootloaderPanel()">🧭 AI Bootloader</button>
       <button class="pink" onclick="loadSuggestionsVault()">🚀 Suggestions Vault</button>
@@ -44,20 +45,21 @@
       <button class="slate" onclick="changeBridgeKey()">🔑 Key</button>
     </div>
   </h1>
-  <div id="statusBanner">READY — Carbon 4 Plain-English Co-Pilot Active. Raw data & code logs render in the File Inspector below.</div>
+  <div id="statusBanner">READY — Carbon 4 Plain-English Co-Pilot Active. Input & Response boxes auto-expand as text grows!</div>
 
   <div class="panel" style="border:1px solid #38bdf8;background:#0c192c;">
-    <strong style="color:#38bdf8;">💬 Carbon 4 Plain-English Co-Pilot (Ask Questions, Explain Files, or Patch & Publish Code):</strong>
+    <strong style="color:#38bdf8;">💬 Carbon 4 Plain-English Co-Pilot (Auto-Expanding Prompt & Response • Enter = Ask, Shift+Enter = New Line):</strong>
     <div class="row">
-      <input id="cloudFileTarget" style="flex:1;min-width:170px;" placeholder="Optional file focus (e.g. src/backend/data.js)" value="src/backend/data.js" />
-      <input id="cloudAiInstruction" style="flex:3;min-width:220px;" placeholder="Ask Carbon 4 anything in plain English, or tell it what feature/fix to apply..." onkeydown="if(event.key==='Enter') runCloudAiCodeEdit(false);" />
+      <input id="cloudFileTarget" style="flex:1;min-width:170px;height:36px;" placeholder="Optional file focus (e.g. src/backend/data.js)" value="src/backend/data.js" />
+      <textarea id="cloudAiInstruction" class="auto-grow" rows="1" style="flex:3;min-width:240px;" placeholder="Ask Carbon 4 anything in plain English, or paste a multi-line instruction (box expands automatically up to 180px then scrolls)..." oninput="autoResizeInput(this, 180)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); runCloudAiCodeEdit(false); }"></textarea>
     </div>
     <div class="row">
       <button class="primary" onclick="runCloudAiCodeEdit(false)">💬 Ask Carbon 4 (Plain-English Summary & Advice)</button>
       <button class="warn" onclick="runCloudAiCodeEdit(true)">🚀 Have Carbon 4 Edit File & Publish to Wix</button>
       <button onclick="readFile(document.getElementById('cloudFileTarget').value)">📄 Load File into Inspector</button>
+      <button class="slate" onclick="clearCoPilotBoxes()">🧹 Reset Box</button>
     </div>
-    <div id="carbonChatOutput">👋 Hi Michael! I'm Carbon 4. Here in this top box, I will always explain what I'm doing, summarize results, and give you next-step suggestions in plain English. All raw code, database rows, and technical Gemini progress logs will appear down in the File Inspector box at the bottom of the screen.</div>
+    <div id="carbonChatOutput">👋 Hi Michael! Both your prompt input box above and this Plain-English response box now expand automatically as text increases, and smoothly switch to scrolling once they reach their max height.</div>
   </div>
 
   <div id="dynamicPanel" class="panel" style="display:none;">
@@ -92,11 +94,11 @@
 
   <div class="panel">
     <strong>Carbon 4 Packet / Autonomous SQL Runner (Outputs Raw Data to File Inspector Below):</strong>
-    <textarea id="batchInput" rows="3" placeholder='{"action":"get_external_ai_bootloader","chatLocation":"CHROME_SIDEBAR"}'></textarea>
+    <textarea id="batchInput" class="auto-grow" rows="2" oninput="autoResizeInput(this, 200)" placeholder='{"action":"get_external_ai_bootloader","chatLocation":"CHROME_SIDEBAR"}'></textarea>
     <div class="row">
       <button class="primary" onclick="runBatch()">⚡ Execute Packet</button>
       <button onclick="listCodebase()">📁 List Cached Codebase</button>
-      <button onclick="document.getElementById('batchInput').value=''">Clear</button>
+      <button onclick="const b=document.getElementById('batchInput');b.value='';autoResizeInput(b,200);">Clear</button>
     </div>
   </div>
 
@@ -111,6 +113,25 @@ window._vaultSuggestionsById = {};
 
 if (location.protocol === "file:" && !localStorage.getItem("ECMD_BRIDGE_KEY")) {
   localStorage.setItem("ECMD_BRIDGE_KEY", "!Cashew09po!");
+}
+
+function autoResizeInput(el, maxPx) {
+  if (!el) return;
+  const cap = maxPx || 180;
+  el.style.height = "auto";
+  const sh = el.scrollHeight;
+  const nextH = Math.max(36, Math.min(sh, cap));
+  el.style.height = nextH + "px";
+  el.style.overflowY = sh > cap ? "auto" : "hidden";
+}
+
+function clearCoPilotBoxes() {
+  const inp = document.getElementById("cloudAiInstruction");
+  if (inp) {
+    inp.value = "";
+    autoResizeInput(inp, 180);
+  }
+  setChatBox("Ready for your next question or build instruction.");
 }
 
 function getBridgeKey() {
@@ -153,6 +174,7 @@ function setChatBox(msg, isErr = false) {
   box.style.color = isErr ? "#fca5a5" : "#f8fafc";
   box.style.borderColor = isErr ? "#f87171" : "#38bdf8";
   box.textContent = msg;
+  box.scrollTop = 0;
 }
 
 function escapeHtml(str) {
@@ -721,7 +743,6 @@ async function loadCliQueuePanel(isSilentPoll = false) {
     const hasActiveJob = rows.some(j => j.status === "pending" || j.status === "running");
     title.textContent = "🤖 Local Gemini CLI Dispatcher Queue " + (hasActiveJob ? "🟢 [AUTO-POLLING EVERY 4s...]" : "(Watched by Start-EcmdCliBridge.ps1 in C:\\ECMD)");
 
-    // Put raw technical CLI output in the bottom File Inspector (#viewer), and a clean Plain-English summary in #carbonChatOutput!
     document.getElementById("viewer").textContent = rows.map(r =>
       `=== JOB ${r.id} [${(r.status || "").toUpperCase()} • ${r.source_agent || "CLI"}] ===\nPrompt: ${r.prompt}\nOutput:\n${r.output || "(Waiting / Running...)"}\n`
     ).join("\n----------------------------------------\n");
@@ -771,7 +792,7 @@ async function loadCliQueuePanel(isSilentPoll = false) {
     if (!existingInput) {
       content.innerHTML = `
         <div class="row">
-          <input id="cliPromptInput" placeholder="Tip: Prefix with 'PS:' for <0.5s PowerShell, or type any AI task for Gemini CLI..." />
+          <textarea id="cliPromptInput" class="auto-grow" rows="1" style="flex:1;min-width:220px;" oninput="autoResizeInput(this, 180)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); enqueueCliPrompt(); }" placeholder="Tip: Prefix with 'PS:' for <0.5s PowerShell, or type any AI task for Gemini CLI (auto-expands as you type)..."></textarea>
           <button class="warn" onclick="enqueueCliPrompt()">⚡ Send to PC PowerShell CLI</button>
           <button class="primary" onclick="loadCliQueuePanel(false)">🔄 Refresh</button>
         </div>
@@ -784,13 +805,15 @@ async function loadCliQueuePanel(isSilentPoll = false) {
       } else {
         content.innerHTML = `
           <div class="row">
-            <input id="cliPromptInput" placeholder="Tip: Prefix with 'PS:' for <0.5s PowerShell, or type any AI task for Gemini CLI..." />
+            <textarea id="cliPromptInput" class="auto-grow" rows="1" style="flex:1;min-width:220px;" oninput="autoResizeInput(this, 180)" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); enqueueCliPrompt(); }" placeholder="Tip: Prefix with 'PS:' for <0.5s PowerShell, or type any AI task for Gemini CLI (auto-expands as you type)..."></textarea>
             <button class="warn" onclick="enqueueCliPrompt()">⚡ Send to PC PowerShell CLI</button>
             <button class="primary" onclick="loadCliQueuePanel(false)">🔄 Refresh</button>
           </div>
           <div id="cliJobsContainer" style="margin-top:8px;">${jobsHtml}</div>
         `;
-        document.getElementById("cliPromptInput").value = draftValue;
+        const restored = document.getElementById("cliPromptInput");
+        restored.value = draftValue;
+        autoResizeInput(restored, 180);
       }
     }
 
@@ -824,6 +847,7 @@ async function enqueueCliPrompt() {
     body: JSON.stringify({ action: "run_sql", sql: `INSERT INTO public.ecmd_cli_queue (prompt, status, source_agent) VALUES ('${safeP}', 'pending', 'CONSOLE_UI')` })
   });
   el.value = "";
+  autoResizeInput(el, 180);
   await loadCliQueuePanel(false);
 }
 
@@ -969,7 +993,7 @@ async function readFile(path) {
       "📄 FILE LOADED INTO INSPECTOR: " + data.path + "\n" +
       "• Size: " + data.lineCount + " lines (loaded in <10ms from " + (data.source || "Supabase cache") + ").\n" +
       "• Full numbered source code is now visible in the File Inspector box at the bottom of the screen.\n" +
-      "• Tip: Type a question or edit instruction in the box above and click '💬 Ask Carbon 4' or '🚀 Have Carbon 4 Edit File & Publish to Wix'!"
+      "• Tip: Type a question or edit instruction in the auto-expanding box above and click '💬 Ask Carbon 4' or '🚀 Have Carbon 4 Edit File & Publish to Wix'!"
     );
     document.getElementById("viewer").textContent = "=== FILE: " + data.path + " (SHA: " + data.sha + " • Source: " + (data.source || "supabase") + ") ===\n" + (data.numberedContent || data.content);
   } catch (e) {
