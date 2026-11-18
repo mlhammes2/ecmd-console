@@ -1,0 +1,64 @@
+﻿name: Sync Carbon 4 Brain Snapshot
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'brain-snapshot.html'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  sync-brain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ecmd-console
+        uses: actions/checkout@v4
+
+      - name: Fetch ecmd_brain and generate brain-snapshot.html
+        env:
+          BRIDGE_KEY: ${{ secrets.ECMD_BRIDGE_KEY }}
+        run: |
+          KEY="${BRIDGE_KEY:-!Cashew09po!}"
+          PAYLOAD=$(echo -n '{"action":"run_sql","sql":"SELECT id, title, category, content FROM public.ecmd_brain ORDER BY id DESC LIMIT 100;"}' | base64 -w 0)
+          curl -s "https://lvynkeuceiqxafgpgdvs.supabase.co/functions/v1/ecmd-carbon-bridge?key=${KEY}&b64=${PAYLOAD}" > response.json
+          
+          python3 - << 'EOF'
+          import json, datetime, html
+          with open('response.json', 'r') as f:
+              data = json.load(f)
+          rows = data.get('rows', [])
+          articles = []
+          for r in rows:
+              cat = html.escape(str(r.get('category', '')))
+              title = html.escape(str(r.get('title', '')))
+              content = html.escape(str(r.get('content', '')))
+              rid = html.escape(str(r.get('id', '')))
+              articles.append(f"<article style='border:1px solid #334155;padding:12px;margin:10px 0;border-radius:8px;'><h3>[{cat}] {title} (ID: {rid})</h3><p>{content}</p></article>")
+          
+          now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+          out = f"""<!DOCTYPE html>
+          <html lang="en">
+          <head><meta charset="utf-8"><title>ECMD Carbon 4 Brain Snapshot</title></head>
+          <body style="font-family:system-ui,sans-serif;background:#0f172a;color:#f8fafc;padding:24px;">
+            <h1>ECMD Carbon 4 — Live Brain & Infrastructure Snapshot</h1>
+            <p>Updated: {now}</p>
+            <section id="brain-entries">
+              {''.join(articles)}
+            </section>
+          </body>
+          </html>"""
+          with open('brain-snapshot.html', 'w', encoding='utf-8') as out_f:
+              out_f.write(out)
+          EOF
+
+      - name: Commit and Push Updated Snapshot
+        run: |
+          git config user.name "ECMD Carbon 4 Bot"
+          git config user.email "actions@github.com"
+          git add brain-snapshot.html
+          git diff --staged --quiet || (git commit -m "chore: auto-sync brain-snapshot.html" && git push)
